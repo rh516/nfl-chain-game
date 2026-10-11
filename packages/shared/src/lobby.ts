@@ -35,7 +35,6 @@ export const roomStatusSchema = z.enum([
 
 export const createRoomInputSchema = z.object({
   displayName: displayNameSchema,
-  roomCode: roomCodeSchema,
 });
 
 export const joinRoomInputSchema = z.object({
