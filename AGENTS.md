@@ -46,7 +46,8 @@ Keep validation behind one interface from the start. The initial fake implementa
 
 ## Room and player lifecycle
 
-- Support lobby creation, joining, starting, active play, completion, and Give Up.
+- Support room creation and joining while `WAITING`, gameplay while `IN_PROGRESS`, and a read-only `ENDED` state.
+- Use `terminalReason` to distinguish a completed 32-team chain from Give Up after a room has ended.
 - Keep connection presence separate from room membership so a temporary disconnect is not treated as an explicit leave.
 - Allow an anonymously authenticated player to reconnect to their room.
 - An explicit leave removes that player and the server updates turn ownership when needed.
@@ -58,7 +59,7 @@ Keep the room record simple. At a high level it should contain:
 
 ```text
 rooms/{roomCode}
-  status                 // lobby | active | completed | given_up
+  status                 // WAITING | IN_PROGRESS | ENDED
   players/{uid}          // display name, join order, connection/presence
   currentTurn            // uid or join-order index
   chain                  // ordered normalized entities and relationship results
@@ -74,7 +75,7 @@ Use canonical IDs for repeat checks, especially for renamed or relocated franchi
 
 1. Create the pnpm workspace, Next.js app, shared package, and Firebase emulator configuration.
 2. Connect the app to Anonymous Auth and RTDB locally; verify a write is received by a realtime listener.
-3. Implement private room creation/joining, display names, lobby state, and 1–4 player limits.
+3. Implement private room creation/joining, display names, waiting-room state, and 1–4 player limits.
 4. Implement server-authoritative turns, chain updates, no-repeat tracking, team progress, and terminal states using the fake `validateMove()`.
 5. Implement reconnect, disconnect presence, explicit leave, and deletion when everyone leaves.
 6. Test full games in multiple browser sessions, including solo and 2–4 player rooms, invalid retries, turn rotation, reconnects, leaves, completion, and Give Up.
