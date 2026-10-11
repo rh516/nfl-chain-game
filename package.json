@@ -1,0 +1,18 @@
+{
+  "name": "nfl-chain-game-v2",
+  "private": true,
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @nfl-chain/web dev",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "emulators": "firebase emulators:start --project demo-nfl-chain"
+  },
+  "devDependencies": {
+    "firebase-tools": "15.33.0"
+  }
+}

@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js and build output
+.next/
+out/
+dist/
+build/
+.turbo/
+
+# Tests and tooling
+coverage/
+.eslintcache
+*.tsbuildinfo
+
+# Local environment files and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# Firebase emulator runtime data
+.firebase/
+firebase/.emulator-data/
+firebase-export-*/
+*-debug.log
+
+# Package-manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+
+# Hosting providers
+.vercel/
