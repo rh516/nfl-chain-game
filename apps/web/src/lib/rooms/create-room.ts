@@ -36,7 +36,6 @@ function buildWaitingRoom({
         joinedAt: now,
       },
     },
-    currentTurn: null,
     createdAt: now,
     updatedAt: now,
   };
