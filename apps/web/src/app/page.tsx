@@ -1,4 +1,5 @@
 import { BrandMark } from "@/components/brand-mark";
+import { GameEntryForm } from "@/components/game-entry-form";
 
 const teamSlots = Array.from({ length: 32 }, (_, index) => index + 1);
 
@@ -22,39 +23,7 @@ export default function HomePage() {
             and jersey numbers.
           </p>
 
-          <div className="entry-card" aria-label="Game entry preview">
-            <label className="field-label" htmlFor="display-name">
-              Your display name
-            </label>
-            <input
-              id="display-name"
-              className="text-field"
-              value=""
-              placeholder="Enter your name"
-              readOnly
-            />
-            <button className="primary-button" type="button" disabled>
-              Create game
-            </button>
-
-            <div className="divider"><span>or</span></div>
-
-            <label className="field-label" htmlFor="game-code">
-              Join a private game
-            </label>
-            <div className="join-row">
-              <input
-                id="game-code"
-                className="text-field text-field--code"
-                value=""
-                placeholder="GAME CODE"
-                readOnly
-              />
-              <button className="secondary-button" type="button" disabled>
-                Join
-              </button>
-            </div>
-          </div>
+          <GameEntryForm />
 
           <div className="feature-row" aria-label="Game highlights">
             <span>1–4 players</span>

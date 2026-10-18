@@ -78,9 +78,15 @@ export const waitingRoomSchema = roomBaseSchema
     },
   );
 
+export const waitingRoomResultSchema = z.object({
+  roomCode: roomCodeSchema,
+  room: waitingRoomSchema,
+});
+
 export type RoomStatus = z.infer<typeof roomStatusSchema>;
 export type CreateRoomInput = z.infer<typeof createRoomInputSchema>;
 export type JoinRoomInput = z.infer<typeof joinRoomInputSchema>;
 export type RoomMember = z.infer<typeof roomMemberSchema>;
 export type RoomBase = z.infer<typeof roomBaseSchema>;
 export type WaitingRoom = z.infer<typeof waitingRoomSchema>;
+export type WaitingRoomResult = z.infer<typeof waitingRoomResultSchema>;

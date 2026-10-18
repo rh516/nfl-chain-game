@@ -1,6 +1,10 @@
 {
   "rules": {
-    ".read": false,
-    ".write": false
+    "rooms": {
+      "$roomCode": {
+        ".read": "auth != null && data.child('players').child(auth.uid).exists()",
+        ".write": false
+      }
+    }
   }
 }

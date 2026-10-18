@@ -121,7 +121,24 @@ export async function joinRoom({
   const roomRef = adminRealtimeDatabase.ref(`rooms/${roomCode}`);
 
   const transaction = await roomRef.transaction((currentRoom) => {
-    const room = parseJoinableRoom(currentRoom);
+    if (currentRoom === null) {
+      return null;
+    }
+
+    const result = waitingRoomSchema.safeParse(currentRoom);
+
+    if (!result.success) {
+      return currentRoom;
+    }
+
+    const room = result.data;
+
+    if (
+      uid in room.players ||
+      Object.keys(room.players).length >= MAX_PLAYERS
+    ) {
+      return room;
+    }
 
     return addPlayerToRoom(room, uid, displayName);
   });
@@ -130,16 +147,23 @@ export async function joinRoom({
     throw new Error("The join-room transaction was not committed.");
   }
 
-  const result = waitingRoomSchema.safeParse(
+  const room = parseJoinableRoom(
     transaction.snapshot.val(),
   );
 
-  if (!result.success) {
-    throw new Error("Joined room failed validation.");
+  if (!(uid in room.players)) {
+    if (Object.keys(room.players).length >= MAX_PLAYERS) {
+      throw new JoinRoomError(
+        "ROOM_FULL",
+        "That room already has the maximum number of players.",
+      );
+    }
+
+    throw new Error("Player was not added to the room.");
   }
 
   return {
     roomCode,
-    room: result.data,
+    room,
   };
 }

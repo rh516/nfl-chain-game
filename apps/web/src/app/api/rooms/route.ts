@@ -5,33 +5,10 @@ import {
 } from "@/lib/auth/require-user";
 import { createRoom } from "@/lib/rooms/create-room";
 import { z } from "zod";
-
-async function readJson(request: Request): Promise<unknown> {
-  try {
-    return await request.json();
-  } 
-  catch {
-    return undefined;
-  }
-}
-
-function errorResponse(
-  status: number,
-  code: string,
-  message: string,
-  details?: unknown,
-) {
-  return Response.json(
-    {
-      error: {
-        code,
-        message,
-        ...(details === undefined ? {} : { details }),
-      },
-    },
-    { status },
-  );
-}
+import {
+  errorResponse,
+  readJson,
+} from "@/lib/http/route-helpers";
 
 async function handleCreateRoom(request: Request) {
   const user = await requireUser(request);
