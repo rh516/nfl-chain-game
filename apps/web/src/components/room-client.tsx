@@ -2,17 +2,23 @@
 
 import {
   joinRoomInputSchema,
-  type WaitingRoom,
+  type Room,
 } from "@nfl-chain/shared";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
+import { EndedRoom } from "@/components/ended-room";
+import { GameRoom } from "@/components/game-room";
+import { WaitingRoom } from "@/components/waiting-room";
 import { getOrCreateAnonymousUser } from "@/lib/auth/get-or-create-anonymous-user";
-import { joinRoomRequest } from "@/lib/rooms/room-api";
-import { subscribeToWaitingRoom } from "@/lib/rooms/subscribe-to-waiting-room";
+import {
+  joinRoomRequest,
+  startGameRequest,
+} from "@/lib/rooms/room-api";
+import { subscribeToRoom } from "@/lib/rooms/subscribe-to-room";
 
-type WaitingRoomClientProps = {
+type RoomClientProps = {
   roomCode: string;
 };
 
@@ -35,15 +41,14 @@ function isPermissionDenied(error: Error) {
   );
 }
 
-export function WaitingRoomClient({
-  roomCode,
-}: WaitingRoomClientProps) {
+export function RoomClient({ roomCode }: RoomClientProps) {
   const [viewState, setViewState] = useState<ViewState>("loading");
-  const [room, setRoom] = useState<WaitingRoom | null>(null);
+  const [room, setRoom] = useState<Room | null>(null);
   const [currentUid, setCurrentUid] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isJoining, setIsJoining] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [subscriptionVersion, setSubscriptionVersion] = useState(0);
 
   useEffect(() => {
@@ -57,13 +62,14 @@ export function WaitingRoomClient({
         }
 
         setCurrentUid(user.uid);
-        unsubscribe = subscribeToWaitingRoom(roomCode, {
+        unsubscribe = subscribeToRoom(roomCode, {
           onRoom(nextRoom) {
             if (!isActive) {
               return;
             }
 
             setRoom(nextRoom);
+            setErrorMessage(null);
             setViewState("room");
           },
           onError(error) {
@@ -104,8 +110,7 @@ export function WaitingRoomClient({
 
     if (!input.success) {
       setErrorMessage(
-        input.error.issues[0]?.message ??
-          "Check the form and try again.",
+        input.error.issues[0]?.message ?? "Check the form and try again.",
       );
       return;
     }
@@ -125,11 +130,46 @@ export function WaitingRoomClient({
     }
   }
 
-  const players = room
-    ? Object.values(room.players).sort(
-        (first, second) => first.joinOrder - second.joinOrder,
-      )
-    : [];
+  async function handleStartGame() {
+    setErrorMessage(null);
+    setIsStarting(true);
+
+    try {
+      const result = await startGameRequest({ roomCode });
+      setRoom(result.room);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsStarting(false);
+    }
+  }
+
+  if (viewState === "room" && room && currentUid) {
+    if (room.status === "WAITING") {
+      return (
+        <WaitingRoom
+          roomCode={roomCode}
+          room={room}
+          currentUid={currentUid}
+          isStarting={isStarting}
+          errorMessage={errorMessage}
+          onStart={() => void handleStartGame()}
+        />
+      );
+    }
+
+    if (room.status === "IN_PROGRESS") {
+      return (
+        <GameRoom
+          roomCode={roomCode}
+          room={room}
+          currentUid={currentUid}
+        />
+      );
+    }
+
+    return <EndedRoom roomCode={roomCode} room={room} />;
+  }
 
   return (
     <main className="room-shell">
@@ -156,7 +196,7 @@ export function WaitingRoomClient({
           <div className="room-message-card room-message-card--form">
             <p className="eyebrow">Private game</p>
             <h1 className="room-message-title">Join {roomCode}</h1>
-            <p>Choose the name other players will see in the waiting room.</p>
+            <p>Choose the name other players will see in the room.</p>
 
             <label className="field-label" htmlFor="invite-display-name">
               Your display name
@@ -195,59 +235,6 @@ export function WaitingRoomClient({
             <Link className="secondary-link" href="/">
               Return home
             </Link>
-          </div>
-        )}
-
-        {viewState === "room" && room && (
-          <div className="waiting-layout">
-            <section className="waiting-card">
-              <div className="waiting-card__header">
-                <div>
-                  <p className="eyebrow">Waiting room</p>
-                  <h1 className="waiting-title">Players</h1>
-                </div>
-                <span className="player-count">
-                  {players.length} / 4
-                </span>
-              </div>
-
-              <ol className="player-list">
-                {players.map((player) => (
-                  <li className="player-row" key={player.uid}>
-                    <span className="player-avatar" aria-hidden="true">
-                      {player.displayName.charAt(0).toUpperCase()}
-                    </span>
-                    <span className="player-copy">
-                      <strong>{player.displayName}</strong>
-                      <small>
-                        {player.uid === currentUid
-                          ? "You"
-                          : player.uid === room.creatorUid
-                            ? "Creator"
-                            : `Player ${player.joinOrder + 1}`}
-                      </small>
-                    </span>
-                    <span className="member-badge">Joined</span>
-                  </li>
-                ))}
-              </ol>
-            </section>
-
-            <aside className="waiting-info-card">
-              <span className="mini-label">Game code</span>
-              <strong className="waiting-code">{roomCode}</strong>
-              <p>Share this code or the current URL with up to three other players.</p>
-
-              <div className="waiting-note">
-                <span className="status-pill__dot" />
-                Room updates are live
-              </div>
-
-              <p className="waiting-footnote">
-                Starting the game and player readiness will be added in the next
-                gameplay section.
-              </p>
-            </aside>
           </div>
         )}
       </section>

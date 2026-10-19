@@ -1,0 +1,38 @@
+export const NFL_TEAMS = [
+  { id: "arizona-cardinals", abbreviation: "ARI", name: "Arizona Cardinals" },
+  { id: "atlanta-falcons", abbreviation: "ATL", name: "Atlanta Falcons" },
+  { id: "baltimore-ravens", abbreviation: "BAL", name: "Baltimore Ravens" },
+  { id: "buffalo-bills", abbreviation: "BUF", name: "Buffalo Bills" },
+  { id: "carolina-panthers", abbreviation: "CAR", name: "Carolina Panthers" },
+  { id: "chicago-bears", abbreviation: "CHI", name: "Chicago Bears" },
+  { id: "cincinnati-bengals", abbreviation: "CIN", name: "Cincinnati Bengals" },
+  { id: "cleveland-browns", abbreviation: "CLE", name: "Cleveland Browns" },
+  { id: "dallas-cowboys", abbreviation: "DAL", name: "Dallas Cowboys" },
+  { id: "denver-broncos", abbreviation: "DEN", name: "Denver Broncos" },
+  { id: "detroit-lions", abbreviation: "DET", name: "Detroit Lions" },
+  { id: "green-bay-packers", abbreviation: "GB", name: "Green Bay Packers" },
+  { id: "houston-texans", abbreviation: "HOU", name: "Houston Texans" },
+  { id: "indianapolis-colts", abbreviation: "IND", name: "Indianapolis Colts" },
+  { id: "jacksonville-jaguars", abbreviation: "JAX", name: "Jacksonville Jaguars" },
+  { id: "kansas-city-chiefs", abbreviation: "KC", name: "Kansas City Chiefs" },
+  { id: "las-vegas-raiders", abbreviation: "LV", name: "Las Vegas Raiders" },
+  { id: "los-angeles-chargers", abbreviation: "LAC", name: "Los Angeles Chargers" },
+  { id: "los-angeles-rams", abbreviation: "LAR", name: "Los Angeles Rams" },
+  { id: "miami-dolphins", abbreviation: "MIA", name: "Miami Dolphins" },
+  { id: "minnesota-vikings", abbreviation: "MIN", name: "Minnesota Vikings" },
+  { id: "new-england-patriots", abbreviation: "NE", name: "New England Patriots" },
+  { id: "new-orleans-saints", abbreviation: "NO", name: "New Orleans Saints" },
+  { id: "new-york-giants", abbreviation: "NYG", name: "New York Giants" },
+  { id: "new-york-jets", abbreviation: "NYJ", name: "New York Jets" },
+  { id: "philadelphia-eagles", abbreviation: "PHI", name: "Philadelphia Eagles" },
+  { id: "pittsburgh-steelers", abbreviation: "PIT", name: "Pittsburgh Steelers" },
+  { id: "san-francisco-49ers", abbreviation: "SF", name: "San Francisco 49ers" },
+  { id: "seattle-seahawks", abbreviation: "SEA", name: "Seattle Seahawks" },
+  { id: "tampa-bay-buccaneers", abbreviation: "TB", name: "Tampa Bay Buccaneers" },
+  { id: "tennessee-titans", abbreviation: "TEN", name: "Tennessee Titans" },
+  { id: "washington-commanders", abbreviation: "WSH", name: "Washington Commanders" },
+] as const;
+
+export const NFL_TEAM_COUNT = NFL_TEAMS.length;
+
+export type NflTeam = (typeof NFL_TEAMS)[number];

@@ -1,9 +1,6 @@
 import "client-only";
 
-import {
-  waitingRoomSchema,
-  type WaitingRoom,
-} from "@nfl-chain/shared";
+import { roomSchema, type Room } from "@nfl-chain/shared";
 import {
   onValue,
   ref,
@@ -12,22 +9,16 @@ import {
 
 import { realtimeDatabase } from "@/lib/firebase/client";
 
-export type WaitingRoomSubscriptionHandlers = {
-  onRoom(room: WaitingRoom): void;
+export type RoomSubscriptionHandlers = {
+  onRoom(room: Room): void;
   onError(error: Error): void;
 };
 
-export function subscribeToWaitingRoom(
+export function subscribeToRoom(
   roomCode: string,
-  {
-    onRoom,
-    onError,
-  }: WaitingRoomSubscriptionHandlers,
+  { onRoom, onError }: RoomSubscriptionHandlers,
 ): Unsubscribe {
-  const roomRef = ref(
-    realtimeDatabase,
-    `rooms/${roomCode}`,
-  );
+  const roomRef = ref(realtimeDatabase, `rooms/${roomCode}`);
 
   return onValue(
     roomRef,
@@ -37,9 +28,7 @@ export function subscribeToWaitingRoom(
         return;
       }
 
-      const result = waitingRoomSchema.safeParse(
-        snapshot.val(),
-      );
+      const result = roomSchema.safeParse(snapshot.val());
 
       if (!result.success) {
         onError(new Error("The room data is invalid."));

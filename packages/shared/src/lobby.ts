@@ -58,7 +58,7 @@ export const roomBaseSchema = z.object({
 
 export const waitingRoomSchema = roomBaseSchema
   .extend({
-    status: z.literal("WAITING")
+    status: z.literal("WAITING"),
   })
   .refine(
     (room) => {

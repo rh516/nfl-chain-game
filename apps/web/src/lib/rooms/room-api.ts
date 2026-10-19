@@ -1,9 +1,18 @@
 import "client-only";
 
 import {
+  giveUpResultSchema,
+  startGameResultSchema,
+  submitMoveResultSchema,
   waitingRoomResultSchema,
   type CreateRoomInput,
+  type GiveUpInput,
+  type GiveUpResult,
   type JoinRoomInput,
+  type StartGameInput,
+  type StartGameResult,
+  type SubmitMoveInput,
+  type SubmitMoveResult,
   type WaitingRoomResult,
 } from "@nfl-chain/shared";
 
@@ -19,7 +28,13 @@ async function readResponseJson(
   }
 }
 
-function getApiErrorMessage(value: unknown): string | undefined {
+type ApiErrorBody = {
+  code: string;
+  message: string;
+  details?: unknown;
+};
+
+function getApiError(value: unknown): ApiErrorBody | undefined {
   if (
     typeof value !== "object" ||
     value === null ||
@@ -39,13 +54,31 @@ function getApiErrorMessage(value: unknown): string | undefined {
     return undefined;
   }
 
-  return error.message;
+  return {
+    code:
+      "code" in error && typeof error.code === "string"
+        ? error.code
+        : "REQUEST_FAILED",
+    message: error.message,
+    ...("details" in error ? { details: error.details } : {}),
+  };
 }
 
-async function requestWaitingRoom(
+export class RoomApiError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly details?: unknown,
+  ) {
+    super(message);
+    this.name = "RoomApiError";
+  }
+}
+
+async function authenticatedPost(
   path: string,
-  input: CreateRoomInput | JoinRoomInput,
-): Promise<WaitingRoomResult> {
+  input: unknown,
+): Promise<unknown> {
   const user = await getOrCreateAnonymousUser();
   const idToken = await user.getIdToken();
 
@@ -61,11 +94,23 @@ async function requestWaitingRoom(
   const body = await readResponseJson(response);
 
   if (!response.ok) {
-    throw new Error(
-      getApiErrorMessage(body) ??
-        "The room request failed.",
+    const apiError = getApiError(body);
+
+    throw new RoomApiError(
+      apiError?.code ?? "REQUEST_FAILED",
+      apiError?.message ?? "The room request failed.",
+      apiError?.details,
     );
   }
+
+  return body;
+}
+
+async function requestWaitingRoom(
+  path: string,
+  input: CreateRoomInput | JoinRoomInput,
+): Promise<WaitingRoomResult> {
+  const body = await authenticatedPost(path, input);
 
   const result = waitingRoomResultSchema.safeParse(body);
 
@@ -88,4 +133,43 @@ export function joinRoomRequest(
   input: JoinRoomInput,
 ): Promise<WaitingRoomResult> {
   return requestWaitingRoom("/api/rooms/join", input);
+}
+
+export async function startGameRequest(
+  input: StartGameInput,
+): Promise<StartGameResult> {
+  const body = await authenticatedPost("/api/rooms/start", input);
+  const result = startGameResultSchema.safeParse(body);
+
+  if (!result.success) {
+    throw new Error("The server returned invalid game data.");
+  }
+
+  return result.data;
+}
+
+export async function submitMoveRequest(
+  input: SubmitMoveInput,
+): Promise<SubmitMoveResult> {
+  const body = await authenticatedPost("/api/rooms/moves", input);
+  const result = submitMoveResultSchema.safeParse(body);
+
+  if (!result.success) {
+    throw new Error("The server returned invalid move data.");
+  }
+
+  return result.data;
+}
+
+export async function giveUpRequest(
+  input: GiveUpInput,
+): Promise<GiveUpResult> {
+  const body = await authenticatedPost("/api/rooms/give-up", input);
+  const result = giveUpResultSchema.safeParse(body);
+
+  if (!result.success) {
+    throw new Error("The server returned invalid ended-game data.");
+  }
+
+  return result.data;
 }
