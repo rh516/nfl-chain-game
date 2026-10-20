@@ -171,9 +171,6 @@ export async function submitMove({
       validation.reason,
       {
         validatorCode: validation.code,
-        ...(validation.sources
-          ? { sources: validation.sources }
-          : {}),
       },
     );
   }

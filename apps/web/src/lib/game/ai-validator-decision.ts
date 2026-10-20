@@ -4,7 +4,6 @@ import {
   type MoveValidationResult,
   type NflTeam,
   type NormalizedEntity,
-  type RelationshipSource,
 } from "@nfl-chain/shared";
 import { z } from "zod";
 
@@ -19,8 +18,6 @@ export const aiMoveDecisionSchema = z.object({
   entityType: entityTypeSchema.nullable(),
   normalizedName: z.string().nullable(),
   canonicalTeamId: z.string().nullable(),
-  relationshipSummary: z.string().nullable(),
-  reason: z.string(),
 });
 
 export type AiMoveDecision = z.infer<typeof aiMoveDecisionSchema>;
@@ -112,10 +109,114 @@ function normalizeEntity(
   };
 }
 
+type InvalidMoveCode = Extract<
+  MoveValidationResult,
+  { valid: false }
+>["code"];
+
+function invalidRelationshipReason(
+  currentEntity: NormalizedEntity | null,
+  decision: AiMoveDecision,
+): string {
+  const submittedEntity = normalizeEntity(decision);
+
+  if (!currentEntity || !submittedEntity) {
+    return "That relationship could not be verified.";
+  }
+
+  if (
+    currentEntity.type === "PLAYER" &&
+    submittedEntity.type === "PLAYER"
+  ) {
+    return `${currentEntity.name} and ${submittedEntity.name} were not teammates during the same NFL or college season.`;
+  }
+
+  const player =
+    currentEntity.type === "PLAYER"
+      ? currentEntity
+      : submittedEntity.type === "PLAYER"
+        ? submittedEntity
+        : undefined;
+  const relatedEntity = player === currentEntity
+    ? submittedEntity
+    : currentEntity;
+
+  if (!player) {
+    return `${submittedEntity.name} cannot be linked to ${currentEntity.name} under the game rules.`;
+  }
+
+  switch (relatedEntity.type) {
+    case "NFL_TEAM":
+      return `${player.name} did not play for the ${relatedEntity.name}.`;
+    case "COLLEGE":
+      return `${player.name} did not play college football for ${relatedEntity.name}.`;
+    case "JERSEY_NUMBER":
+      return `${player.name} did not wear ${relatedEntity.name} in the NFL or college.`;
+    default:
+      return `${submittedEntity.name} cannot be linked to ${currentEntity.name} under the game rules.`;
+  }
+}
+
+function invalidMoveReason(
+  code: InvalidMoveCode,
+  currentEntity: NormalizedEntity | null,
+  decision: AiMoveDecision,
+): string {
+  if (code === "AMBIGUOUS") {
+    return "That answer is ambiguous. Enter a more specific name.";
+  }
+
+  if (code === "INVALID_RELATIONSHIP") {
+    return invalidRelationshipReason(currentEntity, decision);
+  }
+
+  return "That answer is not a recognized player, NFL team, college, or jersey number.";
+}
+
+function validRelationshipSummary(
+  currentEntity: NormalizedEntity,
+  submittedEntity: NormalizedEntity,
+): string {
+  if (
+    currentEntity.type === "PLAYER" &&
+    submittedEntity.type === "PLAYER"
+  ) {
+    return `${currentEntity.name} and ${submittedEntity.name} were teammates during the same NFL or college season.`;
+  }
+
+  const player =
+    currentEntity.type === "PLAYER"
+      ? currentEntity
+      : submittedEntity.type === "PLAYER"
+        ? submittedEntity
+        : undefined;
+  const relatedEntity = player === currentEntity
+    ? submittedEntity
+    : currentEntity;
+
+  if (!player) {
+    throw new AiValidatorUnavailableError(
+      "The AI judge returned an invalid relationship type.",
+    );
+  }
+
+  switch (relatedEntity.type) {
+    case "NFL_TEAM":
+      return `${player.name} did play for the ${relatedEntity.name}.`;
+    case "COLLEGE":
+      return `${player.name} played college football for ${relatedEntity.name}.`;
+    case "JERSEY_NUMBER":
+      return `${player.name} wore ${relatedEntity.name} in the NFL or college.`;
+    default:
+      throw new AiValidatorUnavailableError(
+        "The AI judge returned an invalid relationship type.",
+      );
+  }
+}
+
 export function mapAiMoveDecision(
   decision: AiMoveDecision,
   currentEntity: NormalizedEntity | null,
-  sources: RelationshipSource[],
 ): MoveValidationResult {
   if (!decision.valid) {
     const code =
@@ -128,8 +229,7 @@ export function mapAiMoveDecision(
     return {
       valid: false,
       code,
-      reason: decision.reason.trim() || "That move could not be verified.",
-      ...(sources.length > 0 ? { sources } : {}),
+      reason: invalidMoveReason(code, currentEntity, decision),
     };
   }
 
@@ -151,21 +251,12 @@ export function mapAiMoveDecision(
     return { valid: true, entity };
   }
 
-  const summary = decision.relationshipSummary?.trim();
-
-  if (!summary) {
-    throw new AiValidatorUnavailableError(
-      "The AI judge omitted the verified relationship.",
-    );
-  }
-
   return {
     valid: true,
     entity,
     relationship: {
       kind: "AI",
-      summary,
-      ...(sources.length > 0 ? { sources } : {}),
+      summary: validRelationshipSummary(currentEntity, entity),
     },
   };
 }

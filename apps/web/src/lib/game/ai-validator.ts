@@ -3,7 +3,6 @@ import "server-only";
 import {
   NFL_TEAMS,
   type MoveValidator,
-  type RelationshipSource,
 } from "@nfl-chain/shared";
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
@@ -54,8 +53,7 @@ Output requirements:
 - Use AMBIGUOUS when the answer could identify multiple people or entities.
 - normalizedName should be the commonly recognized full name. Jersey numbers should use the form #18.
 - canonicalTeamId must be null unless entityType is NFL_TEAM.
-- relationshipSummary must be a short factual sentence when a current entity exists and the move is valid; otherwise it must be null.
-- reason must be a short player-facing explanation with no markdown.`;
+- Do not provide an explanation, alternative answer, or unrelated football fact. The server constructs player-facing explanations from the two normalized entities.`;
 
 let client: OpenAI | undefined;
 
@@ -75,35 +73,6 @@ function getClient(): OpenAI {
   });
 
   return client;
-}
-
-function sourceTitle(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return "Source";
-  }
-}
-
-function addSource(
-  sources: Map<string, RelationshipSource>,
-  url: string,
-  title?: string,
-): void {
-  try {
-    const parsedUrl = new URL(url);
-
-    if (!(["http:", "https:"] as string[]).includes(parsedUrl.protocol)) {
-      return;
-    }
-
-    sources.set(url, {
-      title: title?.trim() || sourceTitle(url),
-      url,
-    });
-  } catch {
-    // Ignore malformed source URLs returned by the model service.
-  }
 }
 
 export const validateMove: MoveValidator = async (
@@ -136,7 +105,6 @@ export const validateMove: MoveValidator = async (
               },
             ],
             tool_choice: "required" as const,
-            include: ["web_search_call.action.sources" as const],
           }
         : {}),
     });
@@ -147,38 +115,7 @@ export const validateMove: MoveValidator = async (
       );
     }
 
-    const sources = new Map<string, RelationshipSource>();
-
-    for (const item of response.output) {
-      if (item.type === "message") {
-        for (const content of item.content) {
-          if (content.type !== "output_text") {
-            continue;
-          }
-
-          for (const annotation of content.annotations) {
-            if (annotation.type === "url_citation") {
-              addSource(sources, annotation.url, annotation.title);
-            }
-          }
-        }
-      }
-
-      if (
-        item.type === "web_search_call" &&
-        item.action.type === "search"
-      ) {
-        for (const source of item.action.sources ?? []) {
-          addSource(sources, source.url);
-        }
-      }
-    }
-
-    return mapAiMoveDecision(
-      response.output_parsed,
-      currentEntity,
-      [...sources.values()].slice(0, 3),
-    );
+    return mapAiMoveDecision(response.output_parsed, currentEntity);
   } catch (error) {
     if (error instanceof AiValidatorUnavailableError) {
       throw error;

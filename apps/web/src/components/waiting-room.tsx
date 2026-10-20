@@ -76,7 +76,7 @@ export function WaitingRoom({
             <p>Share this code or the current URL with up to three other players.</p>
 
             <div className="waiting-note">
-              <span className="status-pill__dot" />
+              <span className="waiting-note__dot" />
               Room updates are live
             </div>
 

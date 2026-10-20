@@ -1,4 +1,4 @@
-import type { NormalizedEntity, RelationshipSource } from "@nfl-chain/shared";
+import type { NormalizedEntity } from "@nfl-chain/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -13,11 +13,6 @@ const peytonManning: NormalizedEntity = {
   name: "Peyton Manning",
 };
 
-const source: RelationshipSource = {
-  title: "Example source",
-  url: "https://example.com/football",
-};
-
 function validDecision(
   overrides: Partial<AiMoveDecision> = {},
 ): AiMoveDecision {
@@ -27,9 +22,6 @@ function validDecision(
     entityType: "PLAYER",
     normalizedName: "Marvin Harrison",
     canonicalTeamId: null,
-    relationshipSummary:
-      "Peyton Manning and Marvin Harrison were Indianapolis Colts teammates.",
-    reason: "The relationship is verified.",
     ...overrides,
   };
 }
@@ -41,10 +33,8 @@ describe("mapAiMoveDecision", () => {
         entityType: "NFL_TEAM",
         normalizedName: "Denver Broncos",
         canonicalTeamId: "denver-broncos",
-        relationshipSummary: null,
       }),
       null,
-      [],
     );
 
     expect(result).toEqual({
@@ -58,11 +48,10 @@ describe("mapAiMoveDecision", () => {
     });
   });
 
-  it("stores an AI relationship and its supporting sources", () => {
+  it("stores an AI relationship without exposing web sources", () => {
     const result = mapAiMoveDecision(
       validDecision(),
       peytonManning,
-      [source],
     );
 
     expect(result).toMatchObject({
@@ -74,9 +63,14 @@ describe("mapAiMoveDecision", () => {
       },
       relationship: {
         kind: "AI",
-        sources: [source],
+        summary:
+          "Peyton Manning and Marvin Harrison were teammates during the same NFL or college season.",
       },
     });
+
+    if (result.valid) {
+      expect(result.relationship).not.toHaveProperty("sources");
+    }
   });
 
   it("normalizes jersey numbers", () => {
@@ -84,10 +78,8 @@ describe("mapAiMoveDecision", () => {
       validDecision({
         entityType: "JERSEY_NUMBER",
         normalizedName: "#18",
-        relationshipSummary: "Peyton Manning wore number 18.",
       }),
       peytonManning,
-      [source],
     );
 
     expect(result).toMatchObject({
@@ -100,26 +92,22 @@ describe("mapAiMoveDecision", () => {
     });
   });
 
-  it("preserves an invalid relationship without creating an entity", () => {
+  it("returns a direct rejection without suggesting another answer", () => {
     const result = mapAiMoveDecision(
       {
         valid: false,
         code: "INVALID_RELATIONSHIP",
-        entityType: "COLLEGE",
-        normalizedName: "Alabama",
-        canonicalTeamId: null,
-        relationshipSummary: null,
-        reason: "That player did not play football for Alabama.",
+        entityType: "NFL_TEAM",
+        normalizedName: "New York Jets",
+        canonicalTeamId: "new-york-jets",
       },
       peytonManning,
-      [source],
     );
 
     expect(result).toEqual({
       valid: false,
       code: "INVALID_RELATIONSHIP",
-      reason: "That player did not play football for Alabama.",
-      sources: [source],
+      reason: "Peyton Manning did not play for the New York Jets.",
     });
   });
 
@@ -132,18 +120,25 @@ describe("mapAiMoveDecision", () => {
           canonicalTeamId: "london-jaguars",
         }),
         peytonManning,
-        [],
       ),
     ).toThrow(AiValidatorUnavailableError);
   });
 
-  it("rejects a valid relationship response that omits its summary", () => {
-    expect(() =>
-      mapAiMoveDecision(
-        validDecision({ relationshipSummary: null }),
-        peytonManning,
-        [],
-      ),
-    ).toThrow(AiValidatorUnavailableError);
+  it("creates a direct valid explanation without additional facts", () => {
+    const result = mapAiMoveDecision(
+      validDecision({
+        entityType: "NFL_TEAM",
+        normalizedName: "Indianapolis Colts",
+        canonicalTeamId: "indianapolis-colts",
+      }),
+      peytonManning,
+    );
+
+    expect(result).toMatchObject({
+      valid: true,
+      relationship: {
+        summary: "Peyton Manning did play for the Indianapolis Colts.",
+      },
+    });
   });
 });

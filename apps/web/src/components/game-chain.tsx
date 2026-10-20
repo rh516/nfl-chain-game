@@ -45,22 +45,6 @@ export function GameChain({
             <small>
               {players[entry.submittedByUid]?.displayName ?? "Former player"}
             </small>
-            {entry.relationship?.kind === "AI" && (
-              <div className="entity-card__verification">
-                <span>AI verified</span>
-                {entry.relationship.sources?.map((source, sourceIndex) => (
-                  <a
-                    href={source.url}
-                    key={source.url}
-                    rel="noreferrer"
-                    target="_blank"
-                    title={source.title}
-                  >
-                    {sourceIndex + 1}
-                  </a>
-                ))}
-              </div>
-            )}
           </div>
         </li>
       ))}
