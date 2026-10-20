@@ -30,9 +30,15 @@ export const normalizedEntitySchema = z.object({
   canonicalTeamId: z.string().min(1).optional(),
 });
 
+export const relationshipSourceSchema = z.object({
+  title: z.string().min(1),
+  url: z.url(),
+});
+
 export const relationshipResultSchema = z.object({
-  kind: z.literal("DETERMINISTIC"),
+  kind: z.enum(["DETERMINISTIC", "AI"]),
   summary: z.string().min(1),
+  sources: z.array(relationshipSourceSchema).max(3).optional(),
 });
 
 export const chainEntrySchema = normalizedEntitySchema.extend({
@@ -143,6 +149,7 @@ export const giveUpResultSchema = z.object({
 export type EntityType = z.infer<typeof entityTypeSchema>;
 export type MoveSubmission = z.infer<typeof moveSubmissionSchema>;
 export type NormalizedEntity = z.infer<typeof normalizedEntitySchema>;
+export type RelationshipSource = z.infer<typeof relationshipSourceSchema>;
 export type RelationshipResult = z.infer<typeof relationshipResultSchema>;
 export type ChainEntry = z.infer<typeof chainEntrySchema>;
 export type InProgressRoom = z.infer<typeof inProgressRoomSchema>;
@@ -176,8 +183,13 @@ export type MoveValidationResult =
     }
   | {
       valid: false;
-      code: "INVALID_ENTITY" | "UNKNOWN_TEAM";
+      code:
+        | "INVALID_ENTITY"
+        | "UNKNOWN_TEAM"
+        | "INVALID_RELATIONSHIP"
+        | "AMBIGUOUS";
       reason: string;
+      sources?: RelationshipSource[];
     };
 
 export type MoveValidator = (

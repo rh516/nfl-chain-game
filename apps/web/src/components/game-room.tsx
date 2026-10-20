@@ -3,7 +3,9 @@
 import {
   NFL_TEAM_COUNT,
   moveSubmissionSchema,
+  relationshipSourceSchema,
   type InProgressRoom,
+  type RelationshipSource,
 } from "@nfl-chain/shared";
 import Link from "next/link";
 import { useState } from "react";
@@ -13,6 +15,7 @@ import { GameChain } from "@/components/game-chain";
 import { TeamProgressGrid } from "@/components/team-progress-grid";
 import {
   giveUpRequest,
+  RoomApiError,
   submitMoveRequest,
 } from "@/lib/rooms/room-api";
 
@@ -28,6 +31,23 @@ function getErrorMessage(error: unknown) {
     : "Something went wrong. Try again.";
 }
 
+function getErrorSources(error: unknown): RelationshipSource[] | undefined {
+  if (
+    !(error instanceof RoomApiError) ||
+    typeof error.details !== "object" ||
+    error.details === null ||
+    !("sources" in error.details)
+  ) {
+    return undefined;
+  }
+
+  const result = relationshipSourceSchema
+    .array()
+    .safeParse(error.details.sources);
+
+  return result.success ? result.data : undefined;
+}
+
 export function GameRoom({
   roomCode,
   room,
@@ -40,6 +60,7 @@ export function GameRoom({
   const [feedback, setFeedback] = useState<{
     tone: "success" | "error";
     message: string;
+    sources?: RelationshipSource[];
   } | null>(null);
 
   const currentEntity = room.chain.at(-1);
@@ -87,7 +108,13 @@ export function GameRoom({
         message: `${result.entry.name} was added to the chain.`,
       });
     } catch (error) {
-      setFeedback({ tone: "error", message: getErrorMessage(error) });
+      const sources = getErrorSources(error);
+
+      setFeedback({
+        tone: "error",
+        message: getErrorMessage(error),
+        ...(sources ? { sources } : {}),
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -159,7 +186,7 @@ export function GameRoom({
             <p className="eyebrow">Franchise board</p>
             <h2>{usedTeamCount} of {NFL_TEAM_COUNT} linked</h2>
           </div>
-          <span className="deterministic-badge">Deterministic validator</span>
+          <span className="ai-validator-badge">AI-verified moves</span>
         </div>
         <TeamProgressGrid usedTeams={room.usedTeams} />
       </section>
@@ -208,6 +235,21 @@ export function GameRoom({
                 role="status"
               >
                 {feedback.message}
+                {feedback.sources && feedback.sources.length > 0 && (
+                  <span className="move-feedback__sources">
+                    Sources:
+                    {feedback.sources.map((source, index) => (
+                      <a
+                        href={source.url}
+                        key={source.url}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {index + 1}
+                      </a>
+                    ))}
+                  </span>
+                )}
               </p>
             )}
           </div>
@@ -256,10 +298,10 @@ export function GameRoom({
           </section>
 
           <section className="rules-card">
-            <span className="mini-label">Temporary validator</span>
+            <span className="mini-label">AI judge</span>
             <p>
-              Entity types are inferred from your answer. Structural rules are enforced;
-              factual relationships will be checked when the AI judge is added.
+              Entity types and factual football relationships are verified before the
+              server adds a move to the chain.
             </p>
           </section>
         </aside>

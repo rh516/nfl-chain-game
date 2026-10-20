@@ -17,7 +17,10 @@ import {
 
 import { adminRealtimeDatabase } from "@/lib/firebase/admin";
 import { GameActionError } from "@/lib/game/game-action-error";
-import { validateMove } from "@/lib/game/deterministic-validator";
+import {
+  AiValidatorUnavailableError,
+  validateMove,
+} from "@/lib/game/ai-validator";
 
 type SubmitMoveParams = SubmitMoveInput & {
   uid: string;
@@ -147,13 +150,31 @@ export async function submitMove({
   const initialChainLength = initialRoom.chain.length;
   const initialLastEntryId = currentEntity?.entryId;
 
-  const validation = await validateMove(currentEntity, submission);
+  let validation;
+
+  try {
+    validation = await validateMove(currentEntity, submission);
+  } catch (error) {
+    if (error instanceof AiValidatorUnavailableError) {
+      throw new GameActionError(
+        "VALIDATOR_UNAVAILABLE",
+        "The AI judge is temporarily unavailable. Try again.",
+      );
+    }
+
+    throw error;
+  }
 
   if (!validation.valid) {
     throw new GameActionError(
       "INVALID_MOVE",
       validation.reason,
-      { validatorCode: validation.code },
+      {
+        validatorCode: validation.code,
+        ...(validation.sources
+          ? { sources: validation.sources }
+          : {}),
+      },
     );
   }
 

@@ -9,7 +9,8 @@ export type GameActionErrorCode =
   | "NOT_YOUR_TURN"
   | "INVALID_TRANSITION"
   | "ENTITY_ALREADY_USED"
-  | "INVALID_MOVE";
+  | "INVALID_MOVE"
+  | "VALIDATOR_UNAVAILABLE";
 
 export class GameActionError extends Error {
   constructor(
@@ -34,6 +35,8 @@ export function gameActionErrorStatus(
     case "INVALID_TRANSITION":
     case "INVALID_MOVE":
       return 422;
+    case "VALIDATOR_UNAVAILABLE":
+      return 503;
     default:
       return 409;
   }
